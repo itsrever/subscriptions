@@ -361,10 +361,6 @@
   } else {
     cycle = "every " + months + " months";
   }
-
-  // Hybrid contracts (billed monthly for a number of days, then switching
-  // automatically to the final frequency): hd = days billed monthly,
-  // hf = final frequency in months (1, 3, 6, 12 or 24).
   var hybridDays = parseInt(q.get("hd"), 10);
   var hybridFinalMonths = parseInt(q.get("hf"), 10);
   var isHybrid = !isNaN(hybridDays) && hybridDays > 0 &&
@@ -373,7 +369,7 @@
   function freqLabel(n) {
     if (n === 12) return "One Year";
     if (n === 24) return "Two Years";
-    if (n === 1) return "monthly";
+    if (n === 1) return "Monthly";
     return "every " + n + " months";
   }
 
@@ -398,8 +394,8 @@
     }
 
     if (isHybrid) {
-      currentNote = "Billed monthly for the first " + hybridDays + " days, then automatically switches to " + freqLabel(hybridFinalMonths) + " billing.";
-      currentDescription = "Starts on monthly billing, then continues on your agreed REVER plan — no action needed.";
+      currentNote = "Billed MONTHLY for the first " + hybridDays + " days, then automatically switches to " + freqLabel(hybridFinalMonths) + " billing.";
+      currentDescription = "Starts on MONTHLY billing, then continues on your agreed REVER plan — no action needed.";
     }
 
     plans.push({
