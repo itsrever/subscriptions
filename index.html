@@ -19,6 +19,8 @@
     --link: #0b6fcc;
     --save-bg: #e7f3ff;
     --save-text: #0b6fcc;
+    --trial-bg: #eaf7ee;
+    --trial-text: #1a8a4a;
     --strike: #93a3ba;
   }
 
@@ -210,6 +212,15 @@
     font-weight: 600;
   }
 
+  .plan-trial-line {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--trial-text);
+    line-height: 1.5;
+    text-align: left;
+    margin: 0;
+  }
+
   .plan-note {
     font-size: 13px;
     color: var(--text-secondary);
@@ -374,15 +385,30 @@
     return "every " + n + " months";
   }
 
+  // Free trial: a single "ft" param (days) applies to every plan shown, since it's a
+  // promotion on the link itself, not on one specific plan. Rendered as a line inside the
+  // card, right after the total price, rather than a badge.
+  var freeTrialDays = parseInt(q.get("ft"), 10);
+  if (isNaN(freeTrialDays) || freeTrialDays <= 0) {
+    freeTrialDays = 0;
+  }
+  var trialLine = freeTrialDays > 0
+    ? "Includes a " + (freeTrialDays === 1 ? "1-day" : freeTrialDays + "-day") + " free trial."
+    : "";
+
   var plans = [];
   if (okUrl(q.get("cu")) && okNum(q.get("ca"))) {
+    var currentAmount = Number(q.get("ca"));
     var currentPeriod = "";
+    var currentMonthsInCycle = isAnnual ? 12 : months;
 
     if (isAnnual) {
       currentPeriod = "per year";
     } else {
       currentPeriod = cycle;
     }
+
+    var currentMonthlyEquivalent = currentAmount / currentMonthsInCycle;
 
     var currentNote = "No changes — keep paying as originally agreed.";
     var currentDescription = "";
@@ -394,17 +420,23 @@
     }
 
     if (isHybrid) {
-      currentNote = "Billed <strong>monthly</strong> for the first " + hybridDays + " days, then automatically switches to <strong>" + freqLabel(hybridFinalMonths) + " billing</strong>.";
-      currentDescription = "Starts on monthly billing, then continues on your agreed REVER plan — no action needed.";
+      currentNote = hybridFinalMonths === 1 ? "Billed <strong>monthly</strong> for the first " + hybridDays + " days, then continues on your REVER plan." : "Billed <strong>monthly</strong> for the first " + hybridDays + " days, then automatically switches to <strong>" + freqLabel(hybridFinalMonths) + " billing</strong>.";
     }
+
+    // Only show a total line when the monthly figure above isn't already the total,
+    // i.e. the current cadence bills for more than a single month at a time.
+    var currentTotalLine = currentMonthsInCycle > 1
+      ? "Total: <strong>" + money(currentAmount) + "</strong> " + currentPeriod
+      : "";
 
     plans.push({
       tab: "Current Plan",
-      price: money(q.get("ca")),
-      period: currentPeriod,
+      price: money(currentMonthlyEquivalent),
+      period: "per month",
       save: "",
       note: currentNote,
-      monthly: "",
+      monthly: currentTotalLine,
+      trial: trialLine,
       desc: currentDescription,
       cta: "Continue with your current plan",
       url: q.get("cu")
@@ -412,14 +444,16 @@
   }
 
   if (!isAnnual && okUrl(q.get("au")) && okNum(q.get("aa"))) {
-    var annualMonthly = Number(q.get("aa")) / 12;
+    var annualAmount = Number(q.get("aa"));
+    var annualMonthly = annualAmount / 12;
     plans.push({
       tab: "One Year",
-      price: money(q.get("aa")),
-      period: "per year",
+      price: money(annualMonthly),
+      period: "per month",
       save: "Save 10%",
-      note: "Billed as <strong>" + money(q.get("aa")) + "</strong> once a year.",
-      monthly: "Equivalent to <strong>" + money(annualMonthly) + "/month</strong>",
+      note: "Billed once a year.",
+      monthly: "Total: <strong>" + money(annualAmount) + "</strong> per year",
+      trial: trialLine,
       desc: "Same REVER plan and features, billed once a year instead of " + cadence + ".",
       cta: "Continue with the annual plan",
       url: q.get("au")
@@ -427,14 +461,16 @@
   }
 
   if (okUrl(q.get("tu")) && okNum(q.get("ta"))) {
-    var twoYearMonthly = Number(q.get("ta")) / 24;
+    var twoYearAmount = Number(q.get("ta"));
+    var twoYearMonthly = twoYearAmount / 24;
     plans.push({
       tab: "Two Years",
-      price: money(q.get("ta")),
-      period: "every 2 years",
+      price: money(twoYearMonthly),
+      period: "per month",
       save: "Save 20%",
-      note: "Billed as <strong>" + money(q.get("ta")) + "</strong> every 2 years.",
-      monthly: "Equivalent to <strong>" + money(twoYearMonthly) + "/month</strong>",
+      note: "Billed once every 2 years.",
+      monthly: "Total: <strong>" + money(twoYearAmount) + "</strong> every 2 years",
+      trial: trialLine,
       desc: "Same REVER plan and features, billed once every two years instead of " + cadence + ".",
       cta: "Continue with the bi-annual plan",
       url: q.get("tu")
@@ -474,8 +510,12 @@
     if (plan.monthly) {
       monthlyHtml = "<p class=\"plan-monthly\">" + plan.monthly + "</p>";
     }
+    var trialHtml = "";
+    if (plan.trial) {
+      trialHtml = "<p class=\"plan-trial-line\">" + plan.trial + "</p>";
+    }
 
-    card.innerHTML =badgeHtml +"<div class=\"plan-tab-container\"><span class=\"plan-tab\">" + plan.tab + "</span></div>" +"<div class=\"plan-price-row\">" +"<span class=\"plan-price-main\">" +"<span class=\"plan-price\">" + plan.price + "</span>" +"<span class=\"plan-period\">" + plan.period + "</span>" +"</span>" +"</div>" +"<div class=\"plan-divider\"></div>" +"<div class=\"plan-details\">" + monthlyHtml +"<p class=\"plan-note\">" + plan.note + "</p>" +"<p class=\"plan-desc\">" + plan.desc + "</p>" +"</div>" + "<button type=\"button\" class=\"plan-btn\">" + plan.cta + "</button>";
+    card.innerHTML =badgeHtml +"<div class=\"plan-tab-container\"><span class=\"plan-tab\">" + plan.tab + "</span></div>" +"<div class=\"plan-price-row\">" +"<span class=\"plan-price-main\">" +"<span class=\"plan-price\">" + plan.price + "</span>" +"<span class=\"plan-period\">" + plan.period + "</span>" +"</span>" +"</div>" +"<div class=\"plan-divider\"></div>" +"<div class=\"plan-details\">" + monthlyHtml + trialHtml +"<p class=\"plan-note\">" + plan.note + "</p>" +"<p class=\"plan-desc\">" + plan.desc + "</p>" +"</div>" + "<button type=\"button\" class=\"plan-btn\">" + plan.cta + "</button>";
 
     card.addEventListener("click", function () {
       selectCard(card);
