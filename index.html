@@ -378,6 +378,11 @@
   var isHybrid = !isNaN(hybridDays) && hybridDays > 0 &&
     [1, 3, 6, 12, 24].indexOf(hybridFinalMonths) !== -1;
 
+  // Quan el pla híbrid ja acaba en anual o biennal, oferir aquella mateixa opció
+  // com a targeta a part és redundant: el "Current Plan" ja hi porta.
+  var hybridEndsAnnual = isHybrid && hybridFinalMonths === 12;
+  var hybridEndsTwoYear = isHybrid && hybridFinalMonths === 24;
+
   function freqLabel(n) {
     if (n === 12) return "One Year";
     if (n === 24) return "Two Years";
@@ -443,7 +448,7 @@
     });
   }
 
-  if (!isAnnual && okUrl(q.get("au")) && okNum(q.get("aa"))) {
+  if (!isAnnual && !hybridEndsAnnual && okUrl(q.get("au")) && okNum(q.get("aa"))) {
     var annualAmount = Number(q.get("aa"));
     var annualMonthly = annualAmount / 12;
     plans.push({
@@ -460,7 +465,7 @@
     });
   }
 
-  if (okUrl(q.get("tu")) && okNum(q.get("ta"))) {
+  if (!hybridEndsTwoYear && okUrl(q.get("tu")) && okNum(q.get("ta"))) {
     var twoYearAmount = Number(q.get("ta"));
     var twoYearMonthly = twoYearAmount / 24;
     plans.push({
